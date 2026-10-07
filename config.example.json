@@ -1,0 +1,68 @@
+// このファイルを config.json にコピーして編集してください（// で始まる行はコメントとして無視されます）
+// type は "github" または "backlog"。source が移行元、target が移行先です。
+{
+  "source": {
+    "type": "github",
+    "repo": "your-org/old-repo",
+    // 認証トークンを読む環境変数名（.env にも書けます）
+    "token_env": "GITHUB_TOKEN"
+    // GitHub Enterprise Server の場合:
+    // "api_url": "https://ghe.example.com/api/v3",
+    // git の URL を明示する場合（SSH なども可）:
+    // "git_url": "git@github.com:your-org/old-repo.git"
+  },
+
+  "target": {
+    "type": "backlog",
+    "space_url": "https://your-space.backlog.com",
+    "project": "PROJ",
+    "repo": "new-repo",
+    "api_key_env": "BACKLOG_API_KEY",
+    // Backlog プロジェクトの記法: "markdown" または "backlog"（Backlog 記法）
+    "text_format": "markdown",
+    // Backlog の git URL（省略時は https://<space>/git/<PROJECT>/<repo>.git。認証は Git の資格情報マネージャーを使用）
+    // SSH を使う場合の例:
+    "git_url": "your-space@your-space.git.backlog.com:/PROJ/new-repo.git"
+  },
+
+  // GitHub -> GitHub の例:
+  // "target": { "type": "github", "repo": "your-org/new-repo", "token_env": "GITHUB_TOKEN_TARGET" },
+
+  "options": {
+    // git でブランチ・コミットを移行先へ転送する（false の場合、ブランチは事前に用意しておく）
+    "push_branches": true,
+    // クローズ/マージ済み PR の扱い
+    //   snapshot: 当時のベースコミットを pr-migrate/pr-<番号>/base として作り、同じ差分の PR を再現（推奨）
+    //   skip    : オープンな PR だけ移行
+    //   as-is   : 元のブランチ名のまま作成を試みる（差分が無いと作成に失敗します）
+    "closed_pr_strategy": "snapshot",
+    "branch_prefix": "pr-migrate/",
+
+    // 本文の先頭に移行元 PR の情報（URL・作成者・日時など）を付ける
+    "add_header": true,
+    "title_prefix": "",
+
+    "sync_description": true,
+    "sync_comments": true,
+    "sync_comment_edits": true,
+    // GitHub -> GitHub のとき、レビューコメントを同じ行へのインラインコメントとして再現
+    "inline_review_comments": true,
+    // 移行元のクローズ/マージを移行先に反映（移行先が GitHub の場合のみクローズ可能）
+    "sync_state": true,
+    "state_change_comment": true,
+
+    // 担当者を移行する（user_map で名前を対応付け）
+    "sync_assignee": false,
+    // 移行元ユーザー名 -> 移行先ユーザー名（表示名・担当者設定に使用）
+    "user_map": {
+      // "github-login": "backlogUserId"
+    },
+
+    "timezone_offset_hours": 9,
+    // 書き込み API 呼び出しの間隔（秒）。GitHub の二次レート制限対策
+    "write_interval_sec": 1.0,
+    "work_dir": ".work",
+    // 状態ファイル（省略時は state/<設定ファイル名>.state.json）
+    "state_file": null
+  }
+}
