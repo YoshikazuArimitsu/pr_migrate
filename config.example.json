@@ -1,61 +1,72 @@
 // このファイルを config.json にコピーして編集してください（// で始まる行はコメントとして無視されます）
-// type は "github" または "backlog"。source が移行元、target が移行先です。
+// a と b の 2 つのリポジトリ間で PR を双方向に同期します。type は "github" または "backlog"。
+// （旧形式の "source" / "target" もそのまま使えます。source = a、target = b として扱います）
 {
-  "source": {
-    "type": "github",
-    "repo": "your-org/old-repo",
-    // 認証トークンを読む環境変数名（.env にも書けます）
-    "token_env": "GITHUB_TOKEN"
-    // GitHub Enterprise Server の場合:
-    // "api_url": "https://ghe.example.com/api/v3",
-    // git の URL を明示する場合（SSH なども可）:
-    // "git_url": "git@github.com:your-org/old-repo.git"
-  },
-
-  "target": {
+  "a": {
     "type": "backlog",
+    // ミラー PR のタイトル先頭に付くラベル。a で作られた PR は b 側で "[BL] タイトル" になります
+    // （省略時: Backlog は BL、GitHub は GH。a と b で別の名前にしてください）
+    "label": "BL",
     "space_url": "https://your-space.backlog.com",
     "project": "PROJ",
-    "repo": "new-repo",
+    "repo": "your-repo",
     "api_key_env": "BACKLOG_API_KEY",
     // Backlog プロジェクトの記法: "markdown" または "backlog"（Backlog 記法）
     "text_format": "markdown",
     // Backlog の git URL（省略時は https://<space>/git/<PROJECT>/<repo>.git。認証は Git の資格情報マネージャーを使用）
     // SSH を使う場合の例:
-    "git_url": "your-space@your-space.git.backlog.com:/PROJ/new-repo.git"
+    "git_url": "your-space@your-space.git.backlog.com:/PROJ/your-repo.git"
   },
 
-  // GitHub -> GitHub の例:
-  // "target": { "type": "github", "repo": "your-org/new-repo", "token_env": "GITHUB_TOKEN_TARGET" },
+  "b": {
+    "type": "github",
+    "label": "GH",
+    // "owner/repo" 形式（.git は付けなくてよい）
+    "repo": "your-org/your-repo",
+    // 認証トークンを読む環境変数名（.env にも書けます）
+    "token_env": "GITHUB_TOKEN"
+    // GitHub Enterprise Server の場合:
+    // "api_url": "https://ghe.example.com/api/v3",
+    // git の URL を明示する場合（SSH なども可）:
+    // "git_url": "git@github.com:your-org/your-repo.git"
+  },
 
   "options": {
-    // git でブランチ・コミットを移行先へ転送する（false の場合、ブランチは事前に用意しておく）
+    // 新しいミラー PR を作る向き: both（双方向）/ a_to_b / b_to_a
+    "directions": "both",
+    // ミラー PR のタイトルの先頭に付ける文字列。{label} が同期元のラベルに置き換わります
+    "title_label_format": "[{label}] ",
+
+    // git でブランチ・コミットを転送する（false の場合、ブランチは事前に用意しておく）
     "push_branches": true,
-    // クローズ/マージ済み PR の扱い
-    //   snapshot: 当時のベースコミットを pr-migrate/pr-<番号>/base として作り、同じ差分の PR を再現（推奨）
-    //   skip    : オープンな PR だけ移行
+    // ミラー側の head ブランチに push されたコミットを同期元のブランチへ戻す
+    "sync_branches_both_ways": true,
+    // 既にクローズ/マージ済みの PR の扱い
+    //   skip    : ミラーを作らない（推奨）
+    //   snapshot: 当時のベースコミットを pr-sync/<ラベル>-<番号>/base として作り、同じ差分の PR を再現してクローズ
     //   as-is   : 元のブランチ名のまま作成を試みる（差分が無いと作成に失敗します）
-    "closed_pr_strategy": "snapshot",
-    "branch_prefix": "pr-migrate/",
+    //   ※ Backlog にはクローズ済み PR のミラーは作りません（API でクローズできないため）
+    "closed_pr_strategy": "skip",
+    "branch_prefix": "pr-sync/",
 
-    // 本文の先頭に移行元 PR の情報（URL・作成者・日時など）を付ける
+    // ミラー PR の本文の先頭に同期元 PR の情報（URL・作成者・日時など）を付ける
     "add_header": true,
-    "title_prefix": "",
-
+    // 同期元のタイトル/本文の変更をミラーに反映
     "sync_description": true,
     "sync_comments": true,
     "sync_comment_edits": true,
-    // GitHub -> GitHub のとき、レビューコメントを同じ行へのインラインコメントとして再現
+    // GitHub ⇄ GitHub のとき、レビューコメントを同じ行へのインラインコメントとして再現
     "inline_review_comments": true,
-    // 移行元のクローズ/マージを移行先に反映（移行先が GitHub の場合のみクローズ可能）
+    // クローズ/マージ/再オープンを双方向に反映（Backlog 側はコメントで通知し、手動でクローズ）
     "sync_state": true,
     "state_change_comment": true,
 
-    // 担当者を移行する（user_map で名前を対応付け）
+    // 担当者を同期する（user_map で名前を対応付け）
     "sync_assignee": false,
-    // 移行元ユーザー名 -> 移行先ユーザー名（表示名・担当者設定に使用）
+    // ユーザー名の対応（表示名・担当者設定に使用）。両方向分を書いてください
     "user_map": {
-      // "github-login": "backlogUserId"
+      // "github-login": "backlogUserId",
+      // "backlogUserId": "github-login"
     },
 
     "timezone_offset_hours": 9,
